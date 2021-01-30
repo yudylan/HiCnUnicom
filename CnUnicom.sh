@@ -242,7 +242,7 @@ function main() {
         username=${all_username_password[u]%@*} && password=${all_username_password[u]#*@}
         workdir="/var/log/CnUnicom_$username" && [[ ! -d "$workdir" ]] && mkdir $workdir
         userlogin && userlogin_ook[u]=$(echo ${username:0:3}****${username:7}) || { userlogin_err[u]=$(echo ${username:0:3}****${username:7}); continue; }
-        #membercenter
+        membercenter
         liulactive
         #rm -rf $workdir
     done
