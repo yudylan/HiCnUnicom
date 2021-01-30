@@ -5,8 +5,3 @@
 * 使用联通手机号和服务密码登录,支持获取金币和完成部分联通会员任务,建议复制脚本到自己服务器运行  
   
 * 其它功能请自行抓包添加，欢迎Pr  
-  
-updates:  
-```bash
-2021/1/30: 支持Github Action，请Fork本仓库后添加Secrets设置PARAMETER的值为脚本支持的参数,如 githubaction membercenter 13800008888@112233 18388880000@123456
-```
