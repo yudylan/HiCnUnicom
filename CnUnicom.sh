@@ -18,6 +18,7 @@ echo ${all_parameter[*]} | grep -qE "deviceId@[0-9]+" && deviceId=$(echo ${all_p
 
 #####
 ## 流量激活功能需要传入参数,中间d表示每天,w表示每周一,m代表每月初,格式： liulactive@d@ff80808166c5ee6701676ce21fd14716
+## 如仅需要部分号码激活流量包时使用参数格式：liulactive@d@ff80808166c5ee6701676ce21fd14716@13012341234-18812341234
 ## 1GB日包：          ff80808166c5ee6701676ce21fd14716
 ## 2GB日包:           21010621565413402
 ## 5GB日包:           21010621461012371
@@ -224,12 +225,18 @@ function liulactive() {
     echo ${all_parameter[*]} | grep -qE "liulactive@[mwd]@[0-9a-z]+" || return
     timeparId=$(echo ${all_parameter[*]} | grep -oE "liulactive@[mwd]@[0-9a-z]+" | cut -f2 -d@)
     productId=$(echo ${all_parameter[*]} | grep -oE "liulactive@[mwd]@[0-9a-z]+" | cut -f3 -d@)
+    choosenos=$(echo ${all_parameter[*]} | grep -oE "liulactive@[mwd]@[0-9a-z]+@.*" | cut -f4 -d@)
     # 依照参数m|w|d来判断是否执行
     unset liulactive_run
     [[ ${timeparId} == "m" ]] && [[ "$(date +%d)" == "01" ]] && liulactive_run=true
     [[ ${timeparId} == "w" ]] && [[ "$(date +%u)" == "1" ]]  && liulactive_run=true
     [[ ${timeparId} == "d" ]] && liulactive_run=true
     [[ "$liulactive_run" == "true" ]] || return
+    # 依照参数choosenos来判断是否是指定号码执行,激活功能的参数全格式： liulactive@d@ff80808166c5ee6701676ce21fd14716@13012341234-13112341234
+    unset liulactive_only
+    [[ $choosenos != "" ]] && echo $choosenos | grep -qE "${username}" && liulactive_only=true
+    [[ $choosenos == "" ]] && liulactive_only=true
+    [[ "$liulactive_only" == "true" ]] || return
     # 激活请求
     echo; echo $(date) liulactive..
     curl -sA "$UA" -b $workdir/cookie -c $workdir/cookie_liulactive "https://m.client.10010.com/MyAccount/trafficController/myAccount.htm?flag=1&cUrl=https://m.client.10010.com/myPrizeForActivity/querywinninglist.htm?pageSign=1" >$workdir/liulactive.log
