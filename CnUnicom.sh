@@ -16,7 +16,16 @@ echo ${all_parameter[*]} | grep -qE "appId@[a-z0-9]+" && appId=$(echo ${all_para
 deviceId=$(shuf -i 123456789012345-987654321012345 -n 1)
 echo ${all_parameter[*]} | grep -qE "deviceId@[0-9]+" && deviceId=$(echo ${all_parameter[*]} | grep -oE "deviceId@[0-9]+" | cut -f2 -d@)
 
-# 流量激活功能需要传入参数格式： liulactive@ff80808166c5ee6701676ce21fd14716  1GB日包对应：ff80808166c5ee6701676ce21fd14716
+# 流量激活功能需要传入参数格式： liulactive@ff80808166c5ee6701676ce21fd14716
+## 1GB日包：          ff80808166c5ee6701676ce21fd14716
+## 2GB日包:           21010621565413402
+## 5GB日包:           21010621461012371
+## 10GB日包:          21010621253114290
+## 4GB流量七日包:     20080615550312483
+## 100MB全国流量月包: ff80808165afd2960165d1eb75424667
+## 300MB全国流量月包：ff80808165afd2960165d1e93423464a
+## 500MB全国流量月包: ff80808165afd2960165cdbf4a950c1c
+## 1GB全国流量月包：  ff80808165afd2960165cdbc92470bef
 
 # 联通APP版本
 unicom_version=8.0100
