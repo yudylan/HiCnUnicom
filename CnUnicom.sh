@@ -16,7 +16,8 @@ echo ${all_parameter[*]} | grep -qE "appId@[a-z0-9]+" && appId=$(echo ${all_para
 deviceId=$(shuf -i 123456789012345-987654321012345 -n 1)
 echo ${all_parameter[*]} | grep -qE "deviceId@[0-9]+" && deviceId=$(echo ${all_parameter[*]} | grep -oE "deviceId@[0-9]+" | cut -f2 -d@)
 
-# 流量激活功能需要传入参数格式： liulactive@ff80808166c5ee6701676ce21fd14716
+#####
+## 流量激活功能需要传入参数,中间d表示每天,w表示每周一,m代表每月初,格式： liulactive@d@ff80808166c5ee6701676ce21fd14716
 ## 1GB日包：          ff80808166c5ee6701676ce21fd14716
 ## 2GB日包:           21010621565413402
 ## 5GB日包:           21010621461012371
@@ -26,6 +27,7 @@ echo ${all_parameter[*]} | grep -qE "deviceId@[0-9]+" && deviceId=$(echo ${all_p
 ## 300MB全国流量月包：ff80808165afd2960165d1e93423464a
 ## 500MB全国流量月包: ff80808165afd2960165cdbf4a950c1c
 ## 1GB全国流量月包：  ff80808165afd2960165cdbc92470bef
+#####
 
 # 联通APP版本
 unicom_version=8.0100
@@ -214,13 +216,23 @@ function tgbotinfo() {
 
 function liulactive() {
     # 流量激活功能
-    echo ${all_parameter[*]} | grep -qE "liulactive@[0-9a-z]+" && productId=$(echo ${all_parameter[*]} | grep -oE "liulactive@[0-9a-z]+" | cut -f2 -d@) && echo $(date) liulactive... || return
+    echo ${all_parameter[*]} | grep -qE "liulactive@[mwd]@[0-9a-z]+" || return
+    timeparId=$(echo ${all_parameter[*]} | grep -oE "liulactive@[mwd]@[0-9a-z]+" | cut -f2 -d@)
+    productId=$(echo ${all_parameter[*]} | grep -oE "liulactive@[mwd]@[0-9a-z]+" | cut -f3 -d@)
+    # 依照参数m|w|d来判断是否执行
+    unset liulactive_run
+    [[ ${timeparId} == "m" ]] && [[ "$(date +%d)" == "01" ]] && liulactive_run=true
+    [[ ${timeparId} == "w" ]] && [[ "$(date +%u)" == "1" ]]  && liulactive_run=true
+    [[ ${timeparId} == "d" ]] && liulactive_run=true
+    [[ "$liulactive_run" == "true" ]] || return
+    # 激活请求
+    echo; echo $(date) liulactive..
     curl -sA "$UA" -b $workdir/cookie -c $workdir/cookie_liulactive "https://m.client.10010.com/MyAccount/trafficController/myAccount.htm?flag=1&cUrl=https://m.client.10010.com/myPrizeForActivity/querywinninglist.htm?pageSign=1" >$workdir/liulactive.log
     liulactiveuserLogin="$(cat $workdir/liulactive.log | grep "refreshAccountTime" | grep -oE "[0-9_]+")"
     curl -sA "$UA" -b $workdir/cookie_liulactive -c $workdir/cookie_liulactive "https://m.client.10010.com/MyAccount/MyGiftBagController/refreshAccountTime.htm?userLogin=$liulactiveuserLogin&accountType=FLOW" >/dev/null
     curl -X POST -sA "$UA"  -b $workdir/cookie_liulactive -c $workdir/cookie_liulactive --data "thirdUrl=thirdUrl=https%3A%2F%2Fm.client.10010.com%2FMyAccount%2FtrafficController%2FmyAccount.htm" https://m.client.10010.com/mobileService/customer/getShareRedisInfo.htm >/dev/null
     Referer="https://m.client.10010.com/MyAccount/trafficController/myAccount.htm?flag=1&cUrl=https://m.client.10010.com/myPrizeForActivity/querywinninglist.htm?pageSign=1"
-    curl -X POST -sA "$UA" -e "$Referer" -b $workdir/cookie_liulactive -c $workdir/cookie_liulactive --data "productId=$productId&userLogin=$liulactiveuserLogin&ebCount=1000000&pageFrom=4" "https://m.client.10010.com/MyAccount/exchangeDFlow/exchange.htm?userLogin=$liulactiveuserLogin" | grep -B 2 "正在为您激活"
+    curl -X POST -sA "$UA" -e "$Referer" -b $workdir/cookie_liulactive -c $workdir/cookie_liulactive --data "productId=$productId&userLogin=$liulactiveuserLogin&ebCount=1000000&pageFrom=4" "https://m.client.10010.com/MyAccount/exchangeDFlow/exchange.htm?userLogin=$liulactiveuserLogin" | grep -B 1 "正在为您激活"
 }
 
 function main() {
@@ -230,7 +242,7 @@ function main() {
         username=${all_username_password[u]%@*} && password=${all_username_password[u]#*@}
         workdir="/var/log/CnUnicom_$username" && [[ ! -d "$workdir" ]] && mkdir $workdir
         userlogin && userlogin_ook[u]=$(echo ${username:0:3}****${username:7}) || { userlogin_err[u]=$(echo ${username:0:3}****${username:7}); continue; }
-        membercenter
+        #membercenter
         liulactive
         #rm -rf $workdir
     done
