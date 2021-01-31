@@ -106,7 +106,7 @@ EOF
 }
 
 function membercenter() {
-    echo ${all_parameter[*]} | grep -qE "membercenter" || return
+    echo ${all_parameter[*]} | grep -qE "membercenter" || return 0
     echo; echo starting membercenter...
     
     # 获取文章和评论生成数组数据
@@ -214,15 +214,15 @@ function membercenter() {
 
 function tgbotinfo() {
     # TG_BOT通知消息: 未设置相应传入参数时不执行,传入参数格式 token@*** chat_id@*** | 参考: https://github.com/LXK9301/jd_scripts/blob/master/backUp/TG_PUSH.md
-    echo ${all_parameter[*]} | grep -qE "token@[a-zA-Z0-9:_-]+" && token="$(echo ${all_parameter[*]} | grep -oE "token@[a-zA-Z0-9:_-]+" | cut -f2 -d@)" || return
-    echo ${all_parameter[*]} | grep -qE "chat_id@[0-9-]+" && chat_id="$(echo ${all_parameter[*]} | grep -oE "chat_id@[0-9-]+" | cut -f2 -d@)" || return
+    echo ${all_parameter[*]} | grep -qE "token@[a-zA-Z0-9:_-]+" && token="$(echo ${all_parameter[*]} | grep -oE "token@[a-zA-Z0-9:_-]+" | cut -f2 -d@)" || return 0
+    echo ${all_parameter[*]} | grep -qE "chat_id@[0-9-]+" && chat_id="$(echo ${all_parameter[*]} | grep -oE "chat_id@[0-9-]+" | cut -f2 -d@)" || return 0
     text="$(echo ${userlogin_err[*]} ${#userlogin_err[*]} Failed. ${userlogin_ook[*]} ${#userlogin_ook[*]} Accomplished.)"
     curl -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null
 }
 
 function liulactive() {
     # 流量激活功能
-    echo ${all_parameter[*]} | grep -qE "liulactive@[mwd]@[0-9a-z]+" || return
+    echo ${all_parameter[*]} | grep -qE "liulactive@[mwd]@[0-9a-z]+" || return 0
     timeparId=$(echo ${all_parameter[*]} | grep -oE "liulactive@[mwd]@[0-9a-z]+" | cut -f2 -d@)
     productId=$(echo ${all_parameter[*]} | grep -oE "liulactive@[mwd]@[0-9a-z]+" | cut -f3 -d@)
     choosenos=$(echo ${all_parameter[*]} | grep -oE "liulactive@[mwd]@[0-9a-z]+@.*" | cut -f4 -d@)
@@ -231,12 +231,12 @@ function liulactive() {
     [[ ${timeparId} == "m" ]] && [[ "$(date +%d)" == "01" ]] && liulactive_run=true
     [[ ${timeparId} == "w" ]] && [[ "$(date +%u)" == "1" ]]  && liulactive_run=true
     [[ ${timeparId} == "d" ]] && liulactive_run=true
-    [[ "$liulactive_run" == "true" ]] || return
+    [[ "$liulactive_run" == "true" ]] || return 0
     # 依照参数choosenos来判断是否是指定号码执行,激活功能的参数全格式： liulactive@d@ff80808166c5ee6701676ce21fd14716@13012341234-13112341234
     unset liulactive_only
     [[ $choosenos != "" ]] && echo $choosenos | grep -qE "${username}" && liulactive_only=true
     [[ $choosenos == "" ]] && liulactive_only=true
-    [[ "$liulactive_only" == "true" ]] || return
+    [[ "$liulactive_only" == "true" ]] || return 0
     # 激活请求
     echo; echo $(date) liulactive..
     curl -sA "$UA" -b $workdir/cookie -c $workdir/cookie_liulactive "https://m.client.10010.com/MyAccount/trafficController/myAccount.htm?flag=1&cUrl=https://m.client.10010.com/myPrizeForActivity/querywinninglist.htm?pageSign=1" >$workdir/liulactive.log
