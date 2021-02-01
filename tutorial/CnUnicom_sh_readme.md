@@ -5,3 +5,6 @@
 * 使用联通手机号和服务密码登录,支持获取金币和完成部分联通会员任务,建议复制脚本到自己服务器运行  
   
 * 其它功能请自行抓包添加，欢迎Pr  
+
+* [ASM](https://github.com/lunnlew/AutoSignMachine)  
+  
