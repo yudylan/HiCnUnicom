@@ -259,7 +259,7 @@ function niujieactive() {
     # 每日一次任务
     taskIds=($(curl -X POST -sA "$UA" -e "$Referer" -b $workdir/cookie_niujie "https://m.client.10010.com/Niujie/task/getTaskList" | grep -oE "taskId[^,]+" | cut -f3 -d'"' | tr "\n" " "))
     for taskId in ${taskIds[*]}; do
-        sleep 1 && curl -X POST -sA "$UA" -b $workdir/cookie_niujie --data "taskId=$taskId" "https://m.client.10010.com/Niujie/task/doTask"
+        sleep 1 && curl -X POST -sA "$UA" -b $workdir/cookie_niujie --data "taskId=$taskId" "https://m.client.10010.com/Niujie/task/doTask" | grep -oE "任务已完成" && break
     done
     # 每小时可以收集各场馆1000牛气
     shops=($(cat $workdir/niujie.log | grep -oE "[a-zA-Z]+ShopVenue\":\"1000" | grep -oE "[a-zA-Z]+" | tr "\n" " "))
