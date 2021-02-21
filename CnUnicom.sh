@@ -97,7 +97,7 @@ EOF
     
     # 账号密码登录
     if [[ $status == 1 ]]; then
-        rm -rf $workdir/cookie
+        rm -rf $workdir/cookie*
         curl -X POST -sA "$UA" -c $workdir/cookie "https://m.client.10010.com/mobileService/logout.htm?&desmobile=$username&version=android%40$unicom_version" >/dev/null
         curl -sA "$UA" -b $workdir/cookie -c $workdir/cookie -d @$workdir/signdata "https://m.client.10010.com/mobileService/login.htm" >/dev/null
         token=$(cat $workdir/cookie | grep -E "a_token" | awk  '{print $7}')
@@ -257,16 +257,46 @@ function hfgoactive() {
     ACTID="$(curl -X POST -sA "$UA" -b $workdir/cookie_hfgo --data "positionType=1" https://hfgo.wo.cn/hfgoapi/product/ad/list | grep -oE "atplottery[^?]*" | cut -f2 -d/)"
     curl -sLA "$UA" -b $workdir/cookie_hfgo -c $workdir/cookie_hfgo "https://hfgo.wo.cn/hfgoapi/cuuser/auth/autoLogin?redirectUrl=https://atp.bol.wo.cn/atplottery/${ACTID}?product=hfgo&ch=002&$(cat $workdir/cookie_hfgo | grep -oE "[^_]token.*" | sed s/[[:space:]]//g | sed "s/token/Authorization=/")" >/dev/null
     for ((i = 1; i <= 7; i++)); do
-        echo; curl -sA "$UA"  -b $workdir/cookie_hfgo "https://atp.bol.wo.cn/atpapi/act/lottery/start/v1/actPath/${ACTID}/0" >$workdir/lottery_hfgo.log
-        cat $workdir/lottery_hfgo.log && cat $workdir/lottery_hfgo.log | grep -qE "抽奖次数已用完" && break
+        echo
+        curl -sA "$UA"  -b $workdir/cookie_hfgo "https://atp.bol.wo.cn/atpapi/act/lottery/start/v1/actPath/${ACTID}/0" >$workdir/lottery_hfgo.log
+        cat $workdir/lottery_hfgo.log
+        cat $workdir/lottery_hfgo.log | grep -qE "抽奖次数已用完" && break
     done
     # 签到
     echo; curl -sA "$UA"  -b $workdir/cookie_hfgo https://atp.bol.wo.cn/atpapi/act/actUserSign/everydaySign?actId=1516
 }
 
+function jifeninfo() {
+    # 积分信息显示，需传入参数 jifeninfo
+    echo ${all_parameter[*]} | grep -qE "jifeninfo" || return 0
+    echo; echo starting jifeninfo...
+    curl -X POST -sA "$UA" -b $workdir/cookie --data "reqsn=&reqtime=&cliver=&reqdata=" "https://m.client.10010.com/welfare-mall-front/mobile/show/queryUserTotalScore/v1" >$workdir/jifeninfo.log1 
+    curl -X POST -sA "$UA" -b $workdir/cookie --data "reqsn=&reqtime=&cliver=&reqdata=" "https://m.client.10010.com/welfare-mall-front/mobile/show/flDetail/v1/0" >$workdir/jifeninfo.log2
+    # 
+    total=$(cat $workdir/jifeninfo.log1 | grep -oE "total\":[0-9]+" | grep -oE "[0-9]+")
+    invalid=$(cat $workdir/jifeninfo.log1 | grep -oE "invalid\":[0-9]+" | grep -oE "[0-9]+")
+    canUse=$(cat $workdir/jifeninfo.log1 | grep -oE "canUse\":[0-9]+" | grep -oE "[0-9]+")
+    #
+    availablescore=$(cat $workdir/jifeninfo.log2 | grep -oE "availablescore\":\"[0-9]+" | grep -oE "[0-9]+")
+    invalidscore=$(cat $workdir/jifeninfo.log2 | grep -oE "invalidscore\":\"[0-9]+" | grep -oE "[0-9]+")
+    addScore=$(cat $workdir/jifeninfo.log2 | grep -oE "addScore\":\"[0-9]+" | grep -oE "[0-9]+")
+    # 今日奖励积分
+    today="$(date +%Y-%m-%d)" && todayscore=0
+    todayscorelist=($(cat $workdir/jifeninfo.log2 | grep -oE "createTime\":\"$today[^}]*" | grep -oE "books_number\":[0-9]+" | grep -oE "[0-9]+" | tr "\n" " "))
+    for ((i = 0; i < ${#todayscorelist[*]}; i++)); do todayscore=$((todayscore+todayscorelist[i])); done
+    # 昨日奖励积分
+    yesterday="$(date -d "1 days ago" +%Y-%m-%d)" && yesterdayscore=0
+    yesterdayscorelist=($(cat $workdir/jifeninfo.log2 | grep -oE "createTime\":\"$yesterday[^}]*" | grep -oE "books_number\":[0-9]+" | grep -oE "[0-9]+" | tr "\n" " "))
+    for ((i = 0; i < ${#yesterdayscorelist[*]}; i++)); do yesterdayscore=$((yesterdayscore+yesterdayscorelist[i])); done
+    # info
+    echo 总积分:$total 本月将过期积分:$invalid 可用积分:$canUse
+    echo 奖励积分:$availablescore 本月将过期奖励积分:$invalidscore 
+    echo 本月新增奖励积分:$addScore 昨日奖励积分:$yesterdayscore 今日奖励积分:$todayscore
+}
+
 function main() {
     # 签到任务
-    for ((u = 0; u < ${#all_username_password[*]}; u++)); do
+    for ((u = 0; u < ${#all_username_password[*]}; u++)); do 
         sleep $(shuf -i 1-10 -n 1)
         username=${all_username_password[u]%@*} && password=${all_username_password[u]#*@}
         workdir="${workdirbase}_${username}" && [[ ! -d "$workdir" ]] && mkdir $workdir
@@ -274,6 +304,7 @@ function main() {
         membercenter
         liulactive
         hfgoactive
+        jifeninfo
         #rm -rf $workdir
     done
     echo; echo $(date) ${userlogin_err[*]} ${#userlogin_err[*]} Failed. ${userlogin_ook[*]} ${#userlogin_ook[*]} Accomplished.
