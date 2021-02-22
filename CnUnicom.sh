@@ -92,7 +92,7 @@ isRemberPwd=true
 EOF
 
     # cookie登录
-    data="deviceId=$deviceId&netWay=Wifi&reqtime=$(date +%s)$(shuf -i 100-999 -n 1)&flushkey=1&version=android%40${unicom_version}&deviceModel=oneplus%20a5010&token_online=$(cat token_online | grep -oE "token_online\":\"[^\"]*" | cut -f3 -d\")&appId=$appId&deviceBrand=Oneplus&deviceCode=$deviceId"
+    data="deviceId=$deviceId&netWay=Wifi&reqtime=$(date +%s)$(shuf -i 100-999 -n 1)&flushkey=1&version=android%40${unicom_version}&deviceModel=oneplus%20a5010&token_online=$(cat $workdir/token_online | grep -oE "token_online\":\"[^\"]*" | cut -f3 -d\")&appId=$appId&deviceBrand=Oneplus&deviceCode=$deviceId"
     curl -X POST -sA "$UA" -b $workdir/cookie -c $workdir/cookie --data "$data" https://m.client.10010.com/mobileService/onLine.htm >$workdir/token_online
     cat $workdir/token_online | grep -qE "token_online" && status=0 || status=1
     [[ $status == 0 ]] && echo && echo $(date) cookies登录${username:0:2}******${username:8}成功
