@@ -92,14 +92,16 @@ isRemberPwd=true
 EOF
 
     # cookie登录
-    curl -X POST -sA "$UA" -b $workdir/cookie -c $workdir/cookie "https://m.client.10010.com/mobileService/customer/query/getMyUnicomDateTotle.htm?yw_code=&mobile=$username&version=android%40$unicom_version" | grep -oE "infoDetail" >/dev/null && status=0 || status=1
+    data="deviceId=$deviceId&netWay=Wifi&reqtime=$(date +%s)$(shuf -i 100-999 -n 1)&flushkey=1&version=android%40${unicom_version}&deviceModel=oneplus%20a5010&token_online=$(cat token_online | grep -oE "token_online\":\"[^\"]*" | cut -f3 -d\")&appId=$appId&deviceBrand=Oneplus&deviceCode=$deviceId"
+    curl -X POST -sA "$UA" -b $workdir/cookie -c $workdir/cookie --data "$data" https://m.client.10010.com/mobileService/onLine.htm >$workdir/token_online
+    cat $workdir/token_online | grep -qE "token_online" && status=0 || status=1
     [[ $status == 0 ]] && echo && echo $(date) cookies登录${username:0:2}******${username:8}成功
     
     # 账号密码登录
     if [[ $status == 1 ]]; then
         rm -rf $workdir/cookie*
         curl -X POST -sA "$UA" -c $workdir/cookie "https://m.client.10010.com/mobileService/logout.htm?&desmobile=$username&version=android%40$unicom_version" >/dev/null
-        curl -sA "$UA" -b $workdir/cookie -c $workdir/cookie -d @$workdir/signdata "https://m.client.10010.com/mobileService/login.htm" >/dev/null
+        curl -sA "$UA" -b $workdir/cookie -c $workdir/cookie -d @$workdir/signdata "https://m.client.10010.com/mobileService/login.htm" >$workdir/token_online
         token=$(cat $workdir/cookie | grep -E "a_token" | awk  '{print $7}')
         [[ "$token" = "" ]] && echo && echo $(date) ${username:0:2}******${username:8} Login Failed. && rm -rf $workdir && return 1
         echo && echo $(date) 密码登录${username:0:2}******${username:8}成功
