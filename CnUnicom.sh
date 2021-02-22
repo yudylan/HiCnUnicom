@@ -225,6 +225,9 @@ function tgbotinfo() {
     # 积分信息
     text="$(echo $(echo ${username:0:2}******${username:8}) 总积分:$total 本月将过期积分:$invalid 可用积分:$canUse 奖励积分:$availablescore 本月将过期奖励积分:$invalidscore 本月新增奖励积分:$addScore 昨日奖励积分:$yesterdayscore 今日奖励积分:$todayscore)"
     curl -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
+    # otherinfo
+    text="$(cat $workdir/otherinfo.info)"
+    curl -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
 }
 
 function liulactive() {
@@ -299,6 +302,26 @@ function jifeninfo() {
     echo $(echo ${username:0:2}******${username:8}) 总积分:$total 本月将过期积分:$invalid 可用积分:$canUse 奖励积分:$availablescore 本月将过期奖励积分:$invalidscore 本月新增奖励积分:$addScore 昨日奖励积分:$yesterdayscore 今日奖励积分:$todayscore
 }
 
+function otherinfo() {
+    # 需传入参数 otherinfo
+    echo ${all_parameter[*]} | grep -qE "otherinfo" || return 0
+    echo; echo starting otherinfo...
+    echo $(echo ${username:0:2}******${username:8}) >$workdir/otherinfo.info
+    # 套餐
+    curl -X POST -sA "$UA" -b $workdir/cookie --data "mobile=$username" https://m.client.10010.com/mobileservicequery/operationservice/queryOcsPackageFlowLeftContent >$workdir/otherinfo.log
+    addUpItemName=($(cat $workdir/otherinfo.log | grep -oE "addUpItemName\":\"[^\"]*" | cut -f3 -d\" | tr "\n" " "))
+    endDate=($(cat $workdir/otherinfo.log | grep -oE "endDate\":\"[^\"]*" | cut -f3 -d\" | tr "\n" " "))
+    remain=($(cat $workdir/otherinfo.log | grep -oE "remain\":\"[^\"]*" | cut -f3 -d\" | tr "\n" " "))
+    for ((i = 0; i < ${#addUpItemName[*]}; i++)); do echo ${addUpItemName[i]}-${endDate[i]}-${remain[i]} >>$workdir/otherinfo.info; done
+    # 话费
+    curl -X POST -sLA "$UA" -b $workdir/cookie --data "channel=client" https://m.client.10010.com/mobileservicequery/balancenew/accountBalancenew.htm >$workdir/otherinfo.log
+    curntbalancecust=$(cat $workdir/otherinfo.log | grep -oE "curntbalancecust\":\"-?[0-9]+\.[0-9]+" | cut -f3 -d\")
+    realfeecust=$(cat $workdir/otherinfo.log | grep -oE "realfeecust\":\"-?[0-9]+\.[0-9]+" | cut -f3 -d\")
+    echo 可用余额:$curntbalancecust 实时话费:$realfeecust >>$workdir/otherinfo.info
+    #
+    cat $workdir/otherinfo.info
+}
+
 function main() {
     # 签到任务
     for ((u = 0; u < ${#all_username_password[*]}; u++)); do 
@@ -310,6 +333,7 @@ function main() {
         liulactive
         hfgoactive
         jifeninfo
+        otherinfo
         tgbotinfo
         #rm -rf $workdir
     done
