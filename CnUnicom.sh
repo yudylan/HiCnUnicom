@@ -41,7 +41,7 @@ unicom_version=8.0100
 UA="Mozilla/5.0 (Linux; Android 6.0.1; oneplus a5010 Build/V417IR; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/52.0.2743.100 Mobile Safari/537.36; unicom{version:android@$unicom_version,desmobile:$username};devicetype{deviceBrand:Oneplus,deviceModel:oneplus a5010}"
 
 # alias curl
-alias curl='curl -m 10'
+alias curl='curl --connect-timeout 10 -m 20'
 
 ################################################################
 function rsaencrypt() {
