@@ -16,6 +16,13 @@ echo ${all_parameter[*]} | grep -qE "appId@[a-z0-9]+" && appId=$(echo ${all_para
 deviceId=$(shuf -i 123456789012345-987654321012345 -n 1)
 echo ${all_parameter[*]} | grep -qE "deviceId@[0-9]+" && deviceId=$(echo ${all_parameter[*]} | grep -oE "deviceId@[0-9]+" | cut -f2 -d@)
 
+# 使用Github Action运行时需要传入参数来修改工作路径: githubaction
+workdirbase="/tmp/log/CnUnicom"
+echo ${all_parameter[*]} | grep -qE "githubaction" && workdirbase="$(pwd)/CnUnicom"
+
+# 联通APP版本
+unicom_version=8.0200
+
 #####
 ## 流量激活功能需要传入参数,中间d表示每天,w表示每周一,m代表每月第二天,格式： liulactive@d@ff80808166c5ee6701676ce21fd14716
 ## 如仅需要部分号码激活流量包时使用参数格式：liulactive@d@ff80808166c5ee6701676ce21fd14716@13012341234-18812341234
@@ -29,16 +36,6 @@ echo ${all_parameter[*]} | grep -qE "deviceId@[0-9]+" && deviceId=$(echo ${all_p
 ## 500MB全国流量月包: ff80808165afd2960165cdbf4a950c1c
 ## 1GB全国流量月包：  ff80808165afd2960165cdbc92470bef
 #####
-
-# 使用Github Action运行时需要传入参数来修改工作路径: githubaction
-workdirbase="/tmp/log/CnUnicom"
-echo ${all_parameter[*]} | grep -qE "githubaction" && workdirbase="$(pwd)/CnUnicom"
-
-# 联通APP版本
-unicom_version=8.0200
-
-# alias curl
-alias curl='curl --connect-timeout 10 -m 20'
 
 ################################################################
 function rsaencrypt() {
@@ -246,9 +243,13 @@ function hfgoactive() {
     curl -sLA "$UA" -b $workdir/cookie -c $workdir/cookie_hfgo "https://m.client.10010.com/mobileService/openPlatform/openPlatLineNew.htm?to_url=https://account.bol.wo.cn/cuuser/open/openLogin/hfgo&yw_code=&desmobile=${username}&version=android@${unicom_version}" >/dev/null
     # 每日签到并抽奖,抽奖免费3次,连续签到七天获得额外3次，每日签到有机会获取额外机会
     ACTID="$(curl -X POST -sA "$UA" -b $workdir/cookie_hfgo --data "positionType=1" https://hfgo.wo.cn/hfgoapi/product/ad/list | grep -oE "atplottery[^?]*" | cut -f2 -d/)"
-    [[ $ACTID == "" ]] && echo 话费购授权失败 && return 1
+    echo $ACTID | grep -vE "[a-zA-Z0-9]+" && echo Unauthorized && return 1
     curl -sLA "$UA" -b $workdir/cookie_hfgo -c $workdir/cookie_hfgo "https://hfgo.wo.cn/hfgoapi/cuuser/auth/autoLogin?redirectUrl=https://atp.bol.wo.cn/atplottery/${ACTID}?product=hfgo&ch=002&$(cat $workdir/cookie_hfgo | grep -oE "[^_]token.*" | sed s/[[:space:]]//g | sed "s/token/Authorization=/")" >/dev/null
-    echo; curl -sA "$UA"  -b $workdir/cookie_hfgo https://atp.bol.wo.cn/atpapi/act/actUserSign/everydaySign?actId=1516
+    # 签到
+    curl -sA "$UA"  -b $workdir/cookie_hfgo https://atp.bol.wo.cn/atpapi/act/actUserSign/everydaySign?actId=1516 >$workdir/hfgoactivesign.log
+    cat $workdir/hfgoactivesign.log
+    cat $workdir/hfgoactivesign.log | grep -qE "Unauthorized" && return 1
+    # 抽奖
     for ((i = 1; i <= 9; i++)); do
         echo && echo
         curl -sA "$UA"  -b $workdir/cookie_hfgo "https://atp.bol.wo.cn/atpapi/act/lottery/start/v1/actPath/${ACTID}/0" >$workdir/lottery_hfgo.log
@@ -324,9 +325,10 @@ function freescoregift() {
 }
 
 function tgbotinfo() {
-    # TG_BOT通知消息: 未设置相应传入参数时不执行,传入参数格式 token@*** chat_id@*** | 参考: https://github.com/LXK9301/jd_scripts/blob/master/backUp/TG_PUSH.md
+    # TG_BOT通知消息: 未设置相应传入参数时不执行,传入参数格式 token@*** chat_id@*** | google search: telegram bot token chat_id
     echo ${all_parameter[*]} | grep -qE "token@[a-zA-Z0-9:_-]+" && token="$(echo ${all_parameter[*]} | grep -oE "token@[a-zA-Z0-9:_-]+" | cut -f2 -d@)" || return 0
     echo ${all_parameter[*]} | grep -qE "chat_id@[0-9-]+" && chat_id="$(echo ${all_parameter[*]} | grep -oE "chat_id@[0-9-]+" | cut -f2 -d@)" || return 0
+    echo && echo starting tgbotinfo...
     unset tgsimple sendit
     
     # 简约通知信息，需要传入参数 tgsimple
@@ -369,7 +371,6 @@ function tgbotinfo() {
 }
 
 function main() {
-    # 签到任务
     for ((u = 0; u < ${#all_username_password[*]}; u++)); do 
         sleep $(shuf -i 1-10 -n 1)
         username=${all_username_password[u]%@*} && password=${all_username_password[u]#*@}
@@ -383,9 +384,9 @@ function main() {
         otherinfo
         freescoregift
         tgbotinfo
-        #rm -rf $workdir
     done
     echo && echo $(date) ${userlogin_err[*]} ${#userlogin_err[*]} Failed. ${userlogin_ook[*]} ${#userlogin_ook[*]} Accomplished.
+    #rm -rf ${workdirbase}_*
 }
 
 main
