@@ -242,17 +242,22 @@ function hfgoactive() {
     # 话费购活动，需传入参数 hfgoactive
     echo ${all_parameter[*]} | grep -qE "hfgoactive" || return 0
     echo && echo starting hfgoactive...
+    echo $(echo ${username:0:2}******${username:8}) >$workdir/hfgoactive.info
     curl -sLA "$UA" -b $workdir/cookie -c $workdir/cookie_hfgo "https://m.client.10010.com/mobileService/openPlatform/openPlatLineNew.htm?to_url=https://account.bol.wo.cn/cuuser/open/openLogin/hfgo&yw_code=&desmobile=${username}&version=android@${unicom_version}" >/dev/null
     # 每日签到并抽奖,抽奖免费3次,连续签到七天获得额外3次，每日签到有机会获取额外机会
     ACTID="$(curl -X POST -sA "$UA" -b $workdir/cookie_hfgo --data "positionType=1" https://hfgo.wo.cn/hfgoapi/product/ad/list | grep -oE "atplottery[^?]*" | cut -f2 -d/)"
+    [[ $ACTID == "" ]] && echo 话费购授权失败 && return 1
     curl -sLA "$UA" -b $workdir/cookie_hfgo -c $workdir/cookie_hfgo "https://hfgo.wo.cn/hfgoapi/cuuser/auth/autoLogin?redirectUrl=https://atp.bol.wo.cn/atplottery/${ACTID}?product=hfgo&ch=002&$(cat $workdir/cookie_hfgo | grep -oE "[^_]token.*" | sed s/[[:space:]]//g | sed "s/token/Authorization=/")" >/dev/null
     echo; curl -sA "$UA"  -b $workdir/cookie_hfgo https://atp.bol.wo.cn/atpapi/act/actUserSign/everydaySign?actId=1516
     for ((i = 1; i <= 9; i++)); do
-        echo
+        echo && echo
         curl -sA "$UA"  -b $workdir/cookie_hfgo "https://atp.bol.wo.cn/atpapi/act/lottery/start/v1/actPath/${ACTID}/0" >$workdir/lottery_hfgo.log
-        cat $workdir/lottery_hfgo.log | grep -qE "抽奖次数已用完" && echo && break || echo
-        cat $workdir/lottery_hfgo.log | grep -oE "prizeName\":\"[^\"]*" | cut -f3 -d\"
+        cat $workdir/lottery_hfgo.log | grep -oE "抽奖次数已用完" && break
+        cat $workdir/lottery_hfgo.log | grep -oE "Unauthorized" && break
+        cat $workdir/lottery_hfgo.log | grep -oE "prizeName\":\"[^\"]*" | cut -f3 -d\" >>$workdir/hfgoactive.info
     done
+    #
+    cat $workdir/hfgoactive.info
 }
 
 function jifeninfo() {
@@ -322,26 +327,45 @@ function tgbotinfo() {
     # TG_BOT通知消息: 未设置相应传入参数时不执行,传入参数格式 token@*** chat_id@*** | 参考: https://github.com/LXK9301/jd_scripts/blob/master/backUp/TG_PUSH.md
     echo ${all_parameter[*]} | grep -qE "token@[a-zA-Z0-9:_-]+" && token="$(echo ${all_parameter[*]} | grep -oE "token@[a-zA-Z0-9:_-]+" | cut -f2 -d@)" || return 0
     echo ${all_parameter[*]} | grep -qE "chat_id@[0-9-]+" && chat_id="$(echo ${all_parameter[*]} | grep -oE "chat_id@[0-9-]+" | cut -f2 -d@)" || return 0
+    unset tgsimple sendit
+    
     # 简约通知信息，需要传入参数 tgsimple
-    unset tgsimple
     echo ${all_parameter[*]} | grep -qE "tgsimple" && tgsimple=true
     if [[ $tgsimple == "true" ]]; then
-        text="$(echo $(echo ${username:0:2}******${username:8}) 可用余额:$curntbalancecust 实时话费:$realfeecust 积分:$total-$availablescore-$todayscore)"
+        echo ${userlogin_ook[u]} ${#userlogin_ook[*]} Accomplished. ${userlogin_err[u]} ${#userlogin_err[*]} Failed. >$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "otherinfo"     && echo 可用余额:$curntbalancecust 实时话费:$realfeecust >>$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "jifeninfo"     && echo 积分:$total-$availablescore-$todayscore >>$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "freescoregift" && echo 定向积分免费商品数量:$(cat $workdir/freescoregift.info | tail -n +3 | grep -cv '^$') >>$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "hfgoactive"    && echo 话费购奖品: $(cat $workdir/hfgoactive.info | tail -n +2) >>$workdir/tgsimple.info >>$workdir/tgsimple.info
+        cat $workdir/tgsimple.info
+        text="$(cat $workdir/tgsimple.info)"
         curl -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
         return 0
     fi
+    
     # 登录状态
     text="$(echo ${userlogin_err[u]} ${#userlogin_err[*]} Failed. ${userlogin_ook[u]} ${#userlogin_ook[*]} Accomplished.)"
     curl -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
+    
     # 积分信息
     text="$(echo $(echo ${username:0:2}******${username:8}) 总积分:$total 本月将过期积分:$invalid 可用积分:$canUse 奖励积分:$availablescore 本月将过期奖励积分:$invalidscore 本月新增奖励积分:$addScore 本月消耗奖励积分:$decrScore 昨日奖励积分:$yesterdayscore 今日奖励积分:$todayscore)"
-    curl -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
+    echo ${all_parameter[*]} | grep -qE "jifeninfo" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
+    
+    # hfgoactive
+    text="$(cat $workdir/hfgoactive.info)"
+    echo ${all_parameter[*]} | grep -qE "hfgoactive" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
+    
     # otherinfo
     text="$(cat $workdir/otherinfo.info)"
-    curl -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
+    echo ${all_parameter[*]} | grep -qE "otherinfo" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
+    
     # freescoregift
     text="$(cat $workdir/freescoregift.info)"
-    curl -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
+    echo ${all_parameter[*]} | grep -qE "freescoregift" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
 }
 
 function main() {
