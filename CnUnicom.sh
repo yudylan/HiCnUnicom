@@ -364,10 +364,12 @@ function tgbotinfo() {
     echo ${all_parameter[*]} | grep -qE "otherinfo" && sendit=sendit || sendit=""
     [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
     
+    if [ $u == $((${#all_username_password[*]}-1)) ]; then
     # freescoregift
     text="$(cat $workdir/freescoregift.info)"
     echo ${all_parameter[*]} | grep -qE "freescoregift" && sendit=sendit || sendit=""
     [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
+    fi
 }
 
 function main() {
