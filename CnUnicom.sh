@@ -377,6 +377,51 @@ function tgbotinfo() {
     [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
     fi
 }
+function serverchan() {
+    echo ${all_parameter[*]} | grep -qE "sckey@[a-zA-Z0-9:_-]+" && sckey="$(echo ${all_parameter[*]} | grep -oE "sckey@[a-zA-Z0-9:_-]+" | cut -f2 -d@)" || return 0
+    echo && echo starting serverchan...
+    unset tgsimple sendit
+    
+    # 简约通知信息，需要传入参数 tgsimple
+    echo ${all_parameter[*]} | grep -qE "tgsimple" && tgsimple=true
+    if [[ $tgsimple == "true" ]]; then
+        echo ${userlogin_ook[u]} ${#userlogin_ook[*]} Accomplished. ${userlogin_err[u]} ${#userlogin_err[*]} Failed. >$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "otherinfo"     && echo 可用余额:$curntbalancecust 实时话费:$realfeecust >>$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "jifeninfo"     && echo 积分:$total-$availablescore-$todayscore >>$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "freescoregift" && echo 定向积分免费商品数量:$(cat $workdir/freescoregift.info | tail -n +3 | grep -cv '^$') >>$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "hfgoactive"    && echo 话费购奖品: $(cat $workdir/hfgoactive.info | tail -n +2) >>$workdir/tgsimple.info >>$workdir/tgsimple.info
+        cat $workdir/tgsimple.info
+        text="$(cat $workdir/tgsimple.info)"
+        curl -m 10 -sX POST "https://sc.ftqq.com/$sckey.send" -d "text=$text" >/dev/null; sleep 3
+        return 0
+    fi
+    
+    # 登录状态
+    text="$(echo ${userlogin_err[u]} ${#userlogin_err[*]} Failed. ${userlogin_ook[u]} ${#userlogin_ook[*]} Accomplished.)"
+    curl -m 10 -sX POST "https://sc.ftqq.com/$sckey.send" -d "text=$text" >/dev/null; sleep 3
+    
+    # 积分信息
+    text="$(echo $(echo ${username:0:2}******${username:8}) 总积分:$total 本月将过期积分:$invalid 可用积分:$canUse 奖励积分:$availablescore 本月将过期奖励积分:$invalidscore 本月新增奖励积分:$addScore 本月消耗奖励积分:$decrScore 昨日奖励积分:$yesterdayscore 今日奖励积分:$todayscore)"
+    echo ${all_parameter[*]} | grep -qE "jifeninfo" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://sc.ftqq.com/$sckey.send" -d "text=$text" >/dev/null; sleep 3
+    
+    # hfgoactive
+    text="$(cat $workdir/hfgoactive.info)"
+    echo ${all_parameter[*]} | grep -qE "hfgoactive" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://sc.ftqq.com/$sckey.send" -d "text=$text" >/dev/null; sleep 3
+    
+    # otherinfo
+    text="$(cat $workdir/otherinfo.info)"
+    echo ${all_parameter[*]} | grep -qE "otherinfo" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://sc.ftqq.com/$sckey.send" -d "text=$text" >/dev/null; sleep 3
+    
+    if [ $u == $((${#all_username_password[*]}-1)) ]; then
+    # freescoregift
+    text="$(cat $workdir/freescoregift.info)"
+    echo ${all_parameter[*]} | grep -qE "freescoregift" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://sc.ftqq.com/$sckey.send" -d "text=$text" >/dev/null; sleep 3
+    fi
+}
 
 function main() {
     for ((u = 0; u < ${#all_username_password[*]}; u++)); do 
@@ -392,6 +437,7 @@ function main() {
         otherinfo
         freescoregift
         tgbotinfo
+        serverchan
     done
     echo && echo $(date) ${userlogin_err[*]} ${#userlogin_err[*]} Failed. ${userlogin_ook[*]} ${#userlogin_ook[*]} Accomplished.
     #rm -rf ${workdirbase}_*
