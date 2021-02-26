@@ -1,4 +1,4 @@
-> 中国联通APP登录 签到 金币 任务 解流量封顶
+> 登录 签到 会员任务
 
 #### 各版本使用教程  
 > [**CnUnicom.sh**](https://github.com/mixool/HiCnUnicom/blob/master/tutorial/CnUnicom_sh_readme.md)  
