@@ -4,9 +4,15 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin && expor
 ## wget --no-check-certificate https://raw.githubusercontent.com/mixool/HiCnUnicom/master/CnUnicom.sh && chmod +x CnUnicom.sh && bash CnUnicom.sh membercenter 13800008888@112233 18388880000@123456
 ### bash <(curl -m 10 -s https://raw.githubusercontent.com/mixool/HiCnUnicom/master/CnUnicom.sh) membercenter 13800008888@112233 18388880000@123456
 
-# 传入参数格式，支持多账号，手机号@密码必需：13800008888@112233 18388880000@123456
+# 需传入参数，可以阅读脚本理解，或者参考：https://github.com/hzys/HiCnUnicom
 [[ $# != 0 ]] && all_parameter=($(echo $@)) || { echo 'Err  !!! Useage: bash this_script.sh membercenter 13800008888@112233 18388880000@123456'; exit 1; }
+
+# 参数中含有fromfile就从文件读取配置：fromfile@/etc/.HiCnUnicom
+echo ${all_parameter[*]} | grep -qE "fromfile@[^ ]+" | head -n 1 && all_parameter=($(cat $(echo ${all_parameter[*]} | grep -oE "fromfile@[^ ]+" | head -n 1 | cut -f2 -d@)))
+
+# 传入参数手机号@密码为必需参数：13800008888@112233 18388880000@123456
 all_username_password=($(echo ${all_parameter[*]} | grep -oE "[0-9]{11}@[0-9]{6}"| sort -u | tr "\n" " "))
+[[ $all_username_password == "" ]] && echo "账号密码参数错误" && exit 1
 
 # 登录失败尝试修改以下这个appId的值为抓包获取的登录过的联通app,也可使用传入参数 appId@*************
 appId=247b001385de5cc6ce11731ba1b15835313d489d604e58280e455a6c91e5058651acfb0f0b77029c2372659c319e02645b54c0acc367e692ab24a546b83c302d
@@ -371,7 +377,99 @@ function tgbotinfo() {
     [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://api.telegram.org/bot$token/sendMessage" -d "chat_id=$chat_id&text=$text" >/dev/null; sleep 3
     fi
 }
-
+function serverchan() {
+    # serverchan旧版通知消息: sckey@************
+    echo ${all_parameter[*]} | grep -qE "sckey@[a-zA-Z0-9:_-]+" && sckey="$(echo ${all_parameter[*]} | grep -oE "sckey@[a-zA-Z0-9:_-]+" | cut -f2 -d@)" || return 0
+    echo && echo starting serverchan...
+    unset tgsimple sendit
+    
+    # 简约通知信息，需要传入参数 tgsimple
+    echo ${all_parameter[*]} | grep -qE "tgsimple" && tgsimple=true
+    if [[ $tgsimple == "true" ]]; then
+        echo ${userlogin_ook[u]} ${#userlogin_ook[*]} Accomplished. ${userlogin_err[u]} ${#userlogin_err[*]} Failed. >$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "otherinfo"     && echo 可用余额:$curntbalancecust 实时话费:$realfeecust >>$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "jifeninfo"     && echo 积分:$total-$availablescore-$todayscore >>$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "freescoregift" && echo 定向积分免费商品数量:$(cat $workdir/freescoregift.info | tail -n +3 | grep -cv '^$') >>$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "hfgoactive"    && echo 话费购奖品: $(cat $workdir/hfgoactive.info | tail -n +2) >>$workdir/tgsimple.info >>$workdir/tgsimple.info
+        cat $workdir/tgsimple.info
+        text="$(cat $workdir/tgsimple.info)"
+        curl -m 10 -sX POST "https://sc.ftqq.com/$sckey.send" -d "text=$text" >/dev/null; sleep 3
+        return 0
+    fi
+    
+    # 登录状态
+    text="$(echo ${userlogin_err[u]} ${#userlogin_err[*]} Failed. ${userlogin_ook[u]} ${#userlogin_ook[*]} Accomplished.)"
+    curl -m 10 -sX POST "https://sc.ftqq.com/$sckey.send" -d "text=$text" >/dev/null; sleep 3
+    
+    # 积分信息
+    text="$(echo $(echo ${username:0:2}******${username:8}) 总积分:$total 本月将过期积分:$invalid 可用积分:$canUse 奖励积分:$availablescore 本月将过期奖励积分:$invalidscore 本月新增奖励积分:$addScore 本月消耗奖励积分:$decrScore 昨日奖励积分:$yesterdayscore 今日奖励积分:$todayscore)"
+    echo ${all_parameter[*]} | grep -qE "jifeninfo" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://sc.ftqq.com/$sckey.send" -d "text=$text" >/dev/null; sleep 3
+    
+    # hfgoactive
+    text="$(cat $workdir/hfgoactive.info)"
+    echo ${all_parameter[*]} | grep -qE "hfgoactive" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://sc.ftqq.com/$sckey.send" -d "text=$text" >/dev/null; sleep 3
+    
+    # otherinfo
+    text="$(cat $workdir/otherinfo.info)"
+    echo ${all_parameter[*]} | grep -qE "otherinfo" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://sc.ftqq.com/$sckey.send" -d "text=$text" >/dev/null; sleep 3
+    
+    if [ $u == $((${#all_username_password[*]}-1)) ]; then
+    # freescoregift
+    text="$(cat $workdir/freescoregift.info)"
+    echo ${all_parameter[*]} | grep -qE "freescoregift" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://sc.ftqq.com/$sckey.send" -d "text=$text" >/dev/null; sleep 3
+    fi
+}
+function bark() {
+    # bark通知消息: bark@************;bark推送不编码有换行推送不了，用tr空格替换了,推送效果极差
+    echo ${all_parameter[*]} | grep -qE "bark@[a-zA-Z0-9:_-]+" && bark="$(echo ${all_parameter[*]} | grep -oE "bark@[a-zA-Z0-9:_-]+" | cut -f2 -d@)" || return 0
+    echo && echo starting bark...
+    unset tgsimple sendit
+    
+    # 简约通知信息，需要传入参数 tgsimple
+    echo ${all_parameter[*]} | grep -qE "tgsimple" && tgsimple=true
+    if [[ $tgsimple == "true" ]]; then
+        echo ${userlogin_ook[u]} ${#userlogin_ook[*]} Accomplished. ${userlogin_err[u]} ${#userlogin_err[*]} Failed. >$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "otherinfo"     && echo 可用余额:$curntbalancecust 实时话费:$realfeecust >>$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "jifeninfo"     && echo 积分:$total-$availablescore-$todayscore >>$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "freescoregift" && echo 定向积分免费商品数量:$(cat $workdir/freescoregift.info | tail -n +3 | grep -cv '^$') >>$workdir/tgsimple.info
+        echo ${all_parameter[*]} | grep -qE "hfgoactive"    && echo 话费购奖品: $(cat $workdir/hfgoactive.info | tail -n +2) >>$workdir/tgsimple.info >>$workdir/tgsimple.info
+        cat $workdir/tgsimple.info
+        text=$(cat $workdir/tgsimple.info| tr "\n" " ")
+        curl -m 10 -sX POST "https://api.day.app/$bark/$text" >/dev/null; sleep 3
+        return 0
+    fi
+    
+    # 登录状态
+    text="$(echo ${userlogin_err[u]} ${#userlogin_err[*]} Failed. ${userlogin_ook[u]} ${#userlogin_ook[*]} Accomplished.| tr "\n" " ")"
+    curl -m 10 -sX POST "https://api.day.app/$bark/$text" >/dev/null; sleep 3
+    
+    # 积分信息
+    text="$(echo $(echo ${username:0:2}******${username:8}) 总积分:$total 本月将过期积分:$invalid 可用积分:$canUse 奖励积分:$availablescore 本月将过期奖励积分:$invalidscore 本月新增奖励积分:$addScore 本月消耗奖励积分:$decrScore 昨日奖励积分:$yesterdayscore 今日奖励积分:$todayscore| tr "\n" " ")"
+    echo ${all_parameter[*]} | grep -qE "jifeninfo" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://api.day.app/$bark/$text" >/dev/null; sleep 3
+    
+    # hfgoactive
+    text="$(cat $workdir/hfgoactive.info| tr "\n" " ")"
+    echo ${all_parameter[*]} | grep -qE "hfgoactive" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://api.day.app/$bark/$text" >/dev/null; sleep 3
+    
+    # otherinfo
+    text="$(cat $workdir/otherinfo.info| tr "\n" " ")"
+    echo ${all_parameter[*]} | grep -qE "otherinfo" && sendit=sendit || sendit=""
+    echo $text
+    [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://api.day.app/$bark/$text" >/dev/null; sleep 3
+    
+    if [ $u == $((${#all_username_password[*]}-1)) ]; then
+    # freescoregift
+    text="$(cat $workdir/freescoregift.info| tr "\n" " ")"
+    echo ${all_parameter[*]} | grep -qE "freescoregift" && sendit=sendit || sendit=""
+    [[ $sendit == "sendit" ]] && curl -m 10 -sX POST "https://api.day.app/$bark/$text" >/dev/null; sleep 3
+    fi
+}
 function main() {
     for ((u = 0; u < ${#all_username_password[*]}; u++)); do 
         sleep $(shuf -i 1-10 -n 1)
@@ -386,6 +484,8 @@ function main() {
         otherinfo
         freescoregift
         tgbotinfo
+        serverchan
+        bark
     done
     echo && echo $(date) ${userlogin_err[*]} ${#userlogin_err[*]} Failed. ${userlogin_ook[*]} ${#userlogin_ook[*]} Accomplished.
     #rm -rf ${workdirbase}_*
