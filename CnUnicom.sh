@@ -160,6 +160,10 @@ function membercenter() {
     curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://act.10010.com/SigninApp/signin/daySign?vesion=0.$(shuf -i 1234567890123456-9876543210654321 -n 1)"
     echo && echo
     curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://act.10010.com/SigninApp/signin/todaySign" | grep -oE "status\":\"[0-9]+"
+    
+    curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://act.10010.com/SigninApp/signin/getContinuous"
+    curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://act.10010.com/SigninApp/signin/getIntegral"
+    curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://act.10010.com/SigninApp/signin/getGoldTotal"
     echo && echo
     curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://act.10010.com/SigninApp/signin/bannerAdPlayingLogo"
     
