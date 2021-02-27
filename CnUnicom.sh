@@ -378,7 +378,7 @@ function tgbotinfo() {
     fi
 }
 function serverchan() {
-    # serverchan旧版通知消息: scker@************
+    # serverchan旧版通知消息: sckey@************
     echo ${all_parameter[*]} | grep -qE "sckey@[a-zA-Z0-9:_-]+" && sckey="$(echo ${all_parameter[*]} | grep -oE "sckey@[a-zA-Z0-9:_-]+" | cut -f2 -d@)" || return 0
     echo && echo starting serverchan...
     unset tgsimple sendit
