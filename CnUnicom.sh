@@ -9,7 +9,7 @@ echo $@ | grep -qE "fromfile@[^ ]+" && all_parameter=($(cat $(echo $@ | grep -oE
 [[ ${all_parameter[*]} == "" ]] && echo 获取传入参数失败 && exit 1
 
 # 传入参数手机号@密码为必需参数：13800008888@112233 18388880000@123456
-all_username_password=($(echo ${all_parameter[*]} | grep -oE "[0-9]{11}@[0-9]{6}"| sort -u | tr "\n" " "))
+all_username_password=($(echo ${all_parameter[*]} | grep -oE "1[0-9]{10}@[0-9]{6}"| sort -u | tr "\n" " "))
 [[ $all_username_password == "" ]] && echo "账号密码参数错误" && exit 1
 
 # 登录失败尝试修改以下这个appId的值为抓包获取的登录过的联通app,也可使用传入参数 appId@*************
@@ -28,8 +28,11 @@ echo ${all_parameter[*]} | grep -qE "githubaction" && workdirbase="$(pwd)/CnUnic
 unicom_version=8.0200
 
 #####
-## 流量激活功能需要传入参数,中间d表示每天,w表示每周一,m代表每月第二天,格式： liulactive@d@ff80808166c5ee6701676ce21fd14716
-## 如仅需要部分号码激活流量包时使用参数格式：liulactive@d@ff80808166c5ee6701676ce21fd14716@13012341234-18812341234
+## 流量激活功能需要传入参数,中间d表示每天,w表示每周一,m代表每月第一天和第二天,格式： liulactive@d@ff80808166c5ee6701676ce21fd14716
+## 部分号码每周一激活流量激活4GB流量七日包：liulactive@w@20080615550312483@13012341234-18812341234
+## 每月第一天和第二天激活我的礼包-流量包-1G日包：liulactive@m@null@13012341234@mygiftbag
+## 每日激活2类流量日包： liulactive@d@ff80808166c5ee6701676ce21fd14716@13012341234-18812341234@mygiftbag
+## 可多次传入用于不同号码激活不同流量包: liulactive@d@ff80808166c5ee6701676ce21fd14716 liulactive@w@null@13800008888-13012341234@mygiftbag
 ## 1GB日包：          ff80808166c5ee6701676ce21fd14716
 ## 2GB日包:           21010621565413402
 ## 5GB日包:           21010621461012371
@@ -221,59 +224,49 @@ function membercenter() {
 }
 
 function liulactive() {
-    # 流量激活功能,可多次传入用于不同号码激活不同流量包: liulactive@d@ff80808166c5ee6701676ce21fd14716@13012341234 liulactive@w@20080615550312483@13800008888-13012341234
+    # 流量激活功能,可多次传入用于不同号码激活不同流量包: liulactive@d@ff80808166c5ee6701676ce21fd14716@13012341234 liulactive@w@20080615550312483@13800008888-13012341234@mygiftbag
     liulactivelist=($(echo ${all_parameter[*]} | grep -oE "liulactive@[mwd]@[0-9a-z@-]+" | tr "\n" " ")) && [[ ${#liulactivelist[*]} == 0 ]] && return 0
     echo && echo starting liulactive...
     rm -rf $workdir/liulactive.info
     for ((i = 0; i < ${#liulactivelist[*]}; i++)); do  
+        unset liulactive_run liulactive_only
         timeparId=$(echo ${liulactivelist[i]} | cut -f2 -d@)
         productId=$(echo ${liulactivelist[i]} | cut -f3 -d@)
         choosenos=$(echo ${liulactivelist[i]} | cut -f4 -d@)
-        # 依照参数m|w|d来判断是否执行,分别代表每月二号|每周一|每天
-        unset liulactive_run
+        mygiftbag=$(echo ${liulactivelist[i]} | cut -f5 -d@)
+        # 依照参数m|w|d来判断是否执行,分别代表每月一号和二号|每周一|每天
+        [[ ${timeparId} == "m" ]] && [[ "$(date +%d)" == "01" ]] && liulactive_run=true
         [[ ${timeparId} == "m" ]] && [[ "$(date +%d)" == "02" ]] && liulactive_run=true
         [[ ${timeparId} == "w" ]] && [[ "$(date +%u)" == "1" ]]  && liulactive_run=true
         [[ ${timeparId} == "d" ]] && liulactive_run=true
-        [[ "$liulactive_run" == "true" ]] || return 0
-        # 依照参数choosenos来判断是否是指定号码执行,未指定时全部号码均运行
-        unset liulactive_only
+        [[ "$liulactive_run" == "true" ]] || continue
+        # 依照参数choosenos来判断是否是指定号码执行,未指定时全部号码均运行 | 如使用mygiftbag参数则必须指定号码
         [[ $choosenos != "" ]] && echo $choosenos | grep -qE "${username}" && liulactive_only=true
         [[ $choosenos == "" ]] && liulactive_only=true
-        [[ "$liulactive_only" == "true" ]] || return 0
-        # 激活请求
-        curl -m 10 -sA "$UA" -b $workdir/cookie -c $workdir/cookie_liulactive "https://m.client.10010.com/MyAccount/trafficController/myAccount.htm?flag=1&curl -m 10=https://m.client.10010.com/myPrizeForActivity/querywinninglist.htm?pageSign=1" >$workdir/liulactive.log
-        liulactiveuserLogin="$(cat $workdir/liulactive.log | grep "refreshAccountTime" | grep -oE "[0-9_]+")"
-        curl -m 10 -sA "$UA" -b $workdir/cookie_liulactive -c $workdir/cookie_liulactive "https://m.client.10010.com/MyAccount/MyGiftBagController/refreshAccountTime.htm?userLogin=$liulactiveuserLogin&accountType=FLOW" >/dev/null
-        curl -m 10 -X POST -sA "$UA"  -b $workdir/cookie_liulactive -c $workdir/cookie_liulactive --data "thirdUrl=thirdUrl=https%3A%2F%2Fm.client.10010.com%2FMyAccount%2FtrafficController%2FmyAccount.htm" https://m.client.10010.com/mobileService/customer/getShareRedisInfo.htm >/dev/null
-        Referer="https://m.client.10010.com/MyAccount/trafficController/myAccount.htm?flag=1&curl -m 10=https://m.client.10010.com/myPrizeForActivity/querywinninglist.htm?pageSign=1"
-        curl -m 10 -X POST -sA "$UA" -e "$Referer" -b $workdir/cookie_liulactive -c $workdir/cookie_liulactive --data "productId=$productId&userLogin=$liulactiveuserLogin&ebCount=1000000&pageFrom=4" "https://m.client.10010.com/MyAccount/exchangeDFlow/exchange.htm?userLogin=$liulactiveuserLogin" >$workdir/liulactive.log2
-        cat $workdir/liulactive.log2 | grep -oE ">.+<" | head -n 3 | awk -F'[><]' '{print $2,$4}' | tr "\n" " " >>$workdir/liulactive.info
+        [[ "$liulactive_only" == "true" ]] || continue
+        # 我的礼包-流量兑换-激活请求,当参数为null时不执行
+        if [[ "$productId" != "null" ]]; then
+            curl -m 10 -sA "$UA" -b $workdir/cookie -c $workdir/cookie_liulactive "https://m.client.10010.com/MyAccount/trafficController/myAccount.htm?flag=1&curl -m 10=https://m.client.10010.com/myPrizeForActivity/querywinninglist.htm?pageSign=1" >$workdir/liulactive.log
+            liulactiveuserLogin="$(cat $workdir/liulactive.log | grep "refreshAccountTime" | grep -oE "[0-9_]+")"
+            curl -m 10 -sA "$UA" -b $workdir/cookie_liulactive -c $workdir/cookie_liulactive "https://m.client.10010.com/MyAccount/MyGiftBagController/refreshAccountTime.htm?userLogin=$liulactiveuserLogin&accountType=FLOW" >/dev/null
+            curl -m 10 -X POST -sA "$UA"  -b $workdir/cookie_liulactive -c $workdir/cookie_liulactive --data "thirdUrl=thirdUrl=https%3A%2F%2Fm.client.10010.com%2FMyAccount%2FtrafficController%2FmyAccount.htm" https://m.client.10010.com/mobileService/customer/getShareRedisInfo.htm >/dev/null
+            Referer="https://m.client.10010.com/MyAccount/trafficController/myAccount.htm?flag=1&curl -m 10=https://m.client.10010.com/myPrizeForActivity/querywinninglist.htm?pageSign=1"
+            curl -m 10 -X POST -sA "$UA" -e "$Referer" -b $workdir/cookie_liulactive -c $workdir/cookie_liulactive --data "productId=$productId&userLogin=$liulactiveuserLogin&ebCount=1000000&pageFrom=4" "https://m.client.10010.com/MyAccount/exchangeDFlow/exchange.htm?userLogin=$liulactiveuserLogin" >$workdir/liulactive.log2
+            cat $workdir/liulactive.log2 | grep -oE ">.+<" | head -n 3 | awk -F'[><]' '{print $2,$4}' | tr "\n" " " >>$workdir/liulactive.info
+        fi
+        # 我的礼包-流量包-1G日包对应activeCode为73或者2534,当参数mygiftbag存在时运行: liulactive@d@ff80808166c5ee6701676ce21fd14716@13012341234@mygiftbag
+        if [[ "$mygiftbag" != "" ]]; then
+            curl -m 10 -X POST -sA "$UA"  -b $workdir/cookie --data "typeScreenCondition=2&category=FFLOWPACKET&pageSign=1&CALLBACKURL=https%3A%2F%2Fm.client.10010.com%2FmyPrizeForActivity%2Fquerywinninglist.htm" http://m.client.10010.com/myPrizeForActivity/mygiftbag.htm >$workdir/libaollactive.log
+            mygiftbaglist=($(cat $workdir/libaollactive.log | grep -oE "(73|2534)','[a-zA-Z0-9]+" | sed "s/','/@/g" | tr "\n" " "))
+            for ((j = 0; j < ${#mygiftbaglist[*]}; j++)); do
+                curl -m 10 -X POST -sA "$UA"  -b $workdir/cookie --data "activeCode=${mygiftbaglist[j]%@*}&prizeRecordID=${mygiftbaglist[j]#*@}&userNumber=${username}" http://m.client.10010.com/myPrizeForActivity/queryPrizeDetails.htm | grep -A 15 "奖品状态" | grep -oE "(未激活|激活失败)" && tryit=true || { unset tryit; continue; }
+                libaollName=$(echo $(cat $workdir/libaollactive.log | grep -m 1 '<li>活动') | awk -F '活动：|</li>' '{print $2}' | tr -d '\n' | xxd -plain | sed 's/\(..\)/%\1/g' | tr a-z A-Z)
+                curl -m 10 -X POST -sA "$UA"  -b $workdir/cookie --data "activeCode=${mygiftbaglist[j]%@*}&prizeRecordID=${mygiftbaglist[j]#*@}&activeName=$libaollName" http://m.client.10010.com/myPrizeForActivity/myPrize/activationFlowPackages.htm | grep -oE "activationlimit"  && echo 我的礼包-流量包-1G日包-激活失败 >>$workdir/liulactive.info && break
+                sleep 10
+                curl -m 10 -X POST -sA "$UA"  -b $workdir/cookie --data "activeCode=${mygiftbaglist[j]%@*}&prizeRecordID=${mygiftbaglist[j]#*@}&userNumber=${username}" http://m.client.10010.com/myPrizeForActivity/queryPrizeDetails.htm | grep -A 15 "奖品状态" | grep -qE "已激活" && echo 我的礼包-流量包-1G日包-激活成功 >>$workdir/liulactive.info && break
+            done
+        fi      
     done
-}
-
-function libaollactive() {
-    # 我的礼包流量激活功能
-    echo ${all_parameter[*]} | grep -qE "libaollactive@[mwd]" || return 0
-    timeparId=$(echo ${all_parameter[*]} | grep -oE "libaollactive@[mwd]" | cut -f2 -d@)
-    choosenos=$(echo ${all_parameter[*]} | grep -oE "libaollactive@[mwd]@.*" | cut -f3 -d@)
-    # 依照参数m|w|d来判断是否执行
-    unset liulactive_run
-    [[ ${timeparId} == "m" ]] && [[ "$(date +%d)" == "01" ]] && libaollactive_run=true
-    [[ ${timeparId} == "w" ]] && [[ "$(date +%u)" == "1" ]]  && libaollactive_run=true
-    [[ ${timeparId} == "d" ]] && libaollactive_run=true
-    [[ "$libaollactive_run" == "true" ]] || return 0
-    # 依照参数choosenos来判断是否是指定号码执行,激活功能的参数全格式： libaollactive@d@13012341234-13112341234
-    unset libaollactive_only
-    [[ $choosenos != "" ]] && echo $choosenos | grep -qE "${username}" && libaollactive_only=true
-    [[ $choosenos == "" ]] && libaollactive_only=true
-    [[ "$libaollactive_only" == "true" ]] || return 0
-    # 激活请求
-    echo && echo starting libaollactive...
-    curl -m 10 -X POST -sA "$UA"  -b $workdir/cookie --data "typeScreenCondition=2&category=FFLOWPACKET&pageSign=1&CALLBACKURL=https%3A%2F%2Fm.client.10010.com%2FmyPrizeForActivity%2Fquerywinninglist.htm" http://m.client.10010.com/myPrizeForActivity/mygiftbag.htm >$workdir/libaollactive.log
-    libaollCode=$(echo $(cat $workdir/libaollactive.log | grep -m 1 'onclick="toDetailPage' | grep -oE "[0-9yh]+") | awk -F ' ' '{print $1}')
-    libaollID=$(echo $(cat $workdir/libaollactive.log | grep -m 1 'onclick="toDetailPage' | grep -oE "[0-9yh]+") | awk -F ' ' '{print $2}')    
-    libaollName=$(echo $(cat $workdir/libaollactive.log | grep -m 1 '<li>活动') | awk -F '活动：|</li>' '{print $2}' | tr -d '\n' | xxd -plain | sed 's/\(..\)/%\1/g' | tr a-z A-Z)
-    curl -m 10 -X POST -sA "$UA"  -b $workdir/cookie --data "activeCode=$libaollCode&prizeRecordID=$libaollID&activeName=$libaollName" http://m.client.10010.com/myPrizeForActivity/myPrize/activationFlowPackages.htm
 }
 
 function hfgoactive() {
@@ -417,7 +410,6 @@ function main() {
         userlogin && userlogin_ook[u]=$(echo ${username:0:2}******${username:8}) || { userlogin_err[u]=$(echo ${username:0:2}******${username:8}); continue; }
         membercenter
         liulactive
-        libaollactive
         hfgoactive
         jifeninfo
         otherinfo
