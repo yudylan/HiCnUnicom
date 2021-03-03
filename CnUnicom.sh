@@ -166,6 +166,10 @@ function membercenter() {
     curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://act.10010.com/SigninApp/signin/getGoldTotal"
     echo && echo
     curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://act.10010.com/SigninApp/signin/bannerAdPlayingLogo"
+    ## 每日领取1G流量日包
+    curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://act.10010.com/SigninApp/doTask/finishVideo"
+    curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://act.10010.com/SigninApp/doTask/getTaskInfo"
+    curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://act.10010.com/SigninApp/doTask/getPrize"
     
     # 三次金币抽奖， 每日最多可花费金币执行十三次
     echo && echo
