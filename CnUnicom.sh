@@ -355,8 +355,8 @@ function freescoregift() {
     curl -m 10 -X POST -sLA "$UA" -b $workdir/cookie https://m.client.10010.com/welfare-mall-front-activity/mobile/activity/getPointsMall/v1 >$workdir/freescoregift.log2
     getPointsMallstock=($(cat $workdir/freescoregift.log2 | grep -oE "{[^{]*" | grep -E "tabName\":\"3#定向积分#免费领" | sed "/stock\":0,/d" | grep -oE "stock\":[0-9]+" | sed "s/\":/-/g" | tr "\n" " "))
     getPointsMallgoods=($(cat $workdir/freescoregift.log2 | grep -oE "{[^{]*" | grep -E "tabName\":\"3#定向积分#免费领" | sed "/stock\":0,/d" | grep -oE "goodsName\":\"[^\"]+" | cut -f3 -d\" | tr "\n" " "))
-    getPointsgoodlinku=($(cat $workdir/freescoregift.log2 | grep -oE "{[^{]*" | grep -E "tabName\":\"3#定向积分#免费领" | sed "/stock\":0,/d" | grep -oE "linkUrl\":\"[^\"]+" | cut -f3 -d\" | tr "\n" " "))
-    for ((i = 0; i < ${#getPointsMallgoods[*]}; i++)); do echo ${getPointsMallstock[i]}-${getPointsMallgoods[i]}-${getPointsgoodlinku[i]} >>$workdir/freescoregift.info; done
+    [[ ${#getPointsMallgoods[*]} == 0 ]] && echo 超级星期五定向积分免费商品页面访问失败 >>$workdir/freescoregift.info || echo 超级星期五定向积分商品页面: >>$workdir/freescoregift.info
+    for ((i = 0; i < ${#getPointsMallgoods[*]}; i++)); do echo ${getPointsMallstock[i]}-${getPointsMallgoods[i]} >>$workdir/freescoregift.info; done
 }
 
 function formatsendinfo() {
