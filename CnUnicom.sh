@@ -226,7 +226,7 @@ function membercenter() {
 function liulactive() {
     # 流量激活功能,可多次传入用于不同号码激活不同流量包: liulactive@d@ff80808166c5ee6701676ce21fd14716@13012341234 liulactive@w@20080615550312483@13800008888-13012341234@mygiftbag
     liulactivelist=($(echo ${all_parameter[*]} | grep -oE "liulactive@[mwd]@[0-9a-z@-]+" | tr "\n" " ")) && [[ ${#liulactivelist[*]} == 0 ]] && return 0
-    echo && echo starting liulactive... && rm -rf $workdir/liulactive.info
+    echo && echo starting liulactive... && echo >$workdir/liulactive.info
     for ((i = 0; i < ${#liulactivelist[*]}; i++)); do  
         unset liulactive_run liulactive_only
         timeparId=$(echo ${liulactivelist[i]} | cut -f2 -d@)
@@ -272,7 +272,7 @@ function liulactive() {
 function hfgoactive() {
     # 话费购活动，需传入参数 hfgoactive
     echo ${all_parameter[*]} | grep -qE "hfgoactive" || return 0
-    echo && echo starting hfgoactive... && rm -rf $workdir/hfgoactive.info
+    echo && echo starting hfgoactive... && echo >$workdir/hfgoactive.info
     curl -m 10 -sLA "$UA" -b $workdir/cookie -c $workdir/cookie_hfgo "https://m.client.10010.com/mobileService/openPlatform/openPlatLineNew.htm?to_url=https://account.bol.wo.cn/cuuser/open/openLogin/hfgo&yw_code=&desmobile=${username}&version=android@${unicom_version}" >/dev/null
     # 每日签到并抽奖,抽奖免费3次,连续签到七天获得额外3次，每日签到有机会获取额外机会
     ACTID="$(curl -m 10 -X POST -sA "$UA" -b $workdir/cookie_hfgo --data "positionType=1" https://hfgo.wo.cn/hfgoapi/product/ad/list | grep -oE "atplottery[^?]*" | cut -f2 -d/)"
@@ -325,7 +325,7 @@ function jifeninfo() {
 function otherinfo() {
     # 需传入参数 otherinfo
     echo ${all_parameter[*]} | grep -qE "otherinfo" || return 0
-    echo && echo starting otherinfo... && rm -rf $workdir/otherinfo.info
+    echo && echo starting otherinfo... && echo >$workdir/otherinfo.info
     # 套餐
     curl -m 10 -X POST -sA "$UA" -b $workdir/cookie --data "mobile=$username" https://m.client.10010.com/mobileservicequery/operationservice/queryOcsPackageFlowLeftContent >$workdir/otherinfo.log
     addUpItemName=($(cat $workdir/otherinfo.log | grep -oE "addUpItemName\":\"[^\"]*" | cut -f3 -d\" | tr "\n" " "))
@@ -344,7 +344,7 @@ function otherinfo() {
 function freescoregift() {
     # 定向积分免费商品信息,需传入参数 freescoregift
     echo ${all_parameter[*]} | grep -qE "freescoregift" || return 0
-    echo && echo starting freescoregift... && rm -rf $workdir/freescoregift.info
+    echo && echo starting freescoregift... && echo >$workdir/freescoregift.info
     # 积分商城限量免费领取商品
     big_SHELF_ID=8a29ac8975c327170175e40901610c77
     curl -m 10 -X POST -sLA "$UA" -b $workdir/cookie --data "reqsn=&reqtime=$(date +%s)$(shuf -i 100-999 -n 1)&cliver=&reqdata=%7B%7D" "https://m.client.10010.com/welfare-mall-front/mobile/show/getShelvesInfoDetail/v2?relevanceId=$big_SHELF_ID&sort=&category=2&goodsSkuId=undefined" >$workdir/freescoregift.log
