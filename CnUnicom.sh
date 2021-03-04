@@ -226,8 +226,7 @@ function membercenter() {
 function liulactive() {
     # 流量激活功能,可多次传入用于不同号码激活不同流量包: liulactive@d@ff80808166c5ee6701676ce21fd14716@13012341234 liulactive@w@20080615550312483@13800008888-13012341234@mygiftbag
     liulactivelist=($(echo ${all_parameter[*]} | grep -oE "liulactive@[mwd]@[0-9a-z@-]+" | tr "\n" " ")) && [[ ${#liulactivelist[*]} == 0 ]] && return 0
-    echo && echo starting liulactive...
-    rm -rf $workdir/liulactive.info
+    echo && echo starting liulactive... && rm -rf $workdir/liulactive.info
     for ((i = 0; i < ${#liulactivelist[*]}; i++)); do  
         unset liulactive_run liulactive_only
         timeparId=$(echo ${liulactivelist[i]} | cut -f2 -d@)
@@ -273,8 +272,7 @@ function liulactive() {
 function hfgoactive() {
     # 话费购活动，需传入参数 hfgoactive
     echo ${all_parameter[*]} | grep -qE "hfgoactive" || return 0
-    echo && echo starting hfgoactive...
-    echo $(echo ${username:0:2}******${username:8}) >$workdir/hfgoactive.info
+    echo && echo starting hfgoactive... && rm -rf $workdir/hfgoactive.info
     curl -m 10 -sLA "$UA" -b $workdir/cookie -c $workdir/cookie_hfgo "https://m.client.10010.com/mobileService/openPlatform/openPlatLineNew.htm?to_url=https://account.bol.wo.cn/cuuser/open/openLogin/hfgo&yw_code=&desmobile=${username}&version=android@${unicom_version}" >/dev/null
     # 每日签到并抽奖,抽奖免费3次,连续签到七天获得额外3次，每日签到有机会获取额外机会
     ACTID="$(curl -m 10 -X POST -sA "$UA" -b $workdir/cookie_hfgo --data "positionType=1" https://hfgo.wo.cn/hfgoapi/product/ad/list | grep -oE "atplottery[^?]*" | cut -f2 -d/)"
@@ -327,8 +325,7 @@ function jifeninfo() {
 function otherinfo() {
     # 需传入参数 otherinfo
     echo ${all_parameter[*]} | grep -qE "otherinfo" || return 0
-    echo && echo starting otherinfo...
-    echo $(echo ${username:0:2}******${username:8}) >$workdir/otherinfo.info
+    echo && echo starting otherinfo... && rm -rf $workdir/otherinfo.info
     # 套餐
     curl -m 10 -X POST -sA "$UA" -b $workdir/cookie --data "mobile=$username" https://m.client.10010.com/mobileservicequery/operationservice/queryOcsPackageFlowLeftContent >$workdir/otherinfo.log
     addUpItemName=($(cat $workdir/otherinfo.log | grep -oE "addUpItemName\":\"[^\"]*" | cut -f3 -d\" | tr "\n" " "))
@@ -347,14 +344,20 @@ function otherinfo() {
 function freescoregift() {
     # 定向积分免费商品信息,需传入参数 freescoregift
     echo ${all_parameter[*]} | grep -qE "freescoregift" || return 0
-    echo && echo starting freescoregift...
-    echo $(echo ${username:0:2}******${username:8}) >$workdir/freescoregift.info
-    # 限量免费领取商品
+    echo && echo starting freescoregift... && rm -rf $workdir/freescoregift.info
+    # 积分商城限量免费领取商品
     big_SHELF_ID=8a29ac8975c327170175e40901610c77
     curl -m 10 -X POST -sLA "$UA" -b $workdir/cookie --data "reqsn=&reqtime=$(date +%s)$(shuf -i 100-999 -n 1)&cliver=&reqdata=%7B%7D" "https://m.client.10010.com/welfare-mall-front/mobile/show/getShelvesInfoDetail/v2?relevanceId=$big_SHELF_ID&sort=&category=2&goodsSkuId=undefined" >$workdir/freescoregift.log
     goods_NAME=($(cat $workdir/freescoregift.log | grep -oE "goods_NAME\":\"[^\"]+" | cut -f3 -d\" | tr "\n" " "))
     shop_INTEGRAL=($(cat $workdir/freescoregift.log | grep -oE "shop_INTEGRAL\":\"[^\"]+" | cut -f3 -d\" | tr "\n" " "))
     for ((i = 0; i < ${#goods_NAME[*]}; i++)); do echo ${goods_NAME[i]}-需要定向积分-${shop_INTEGRAL[i]} >>$workdir/freescoregift.info; done
+    # 超级星期五定向积分免费商品页面
+    curl -m 10 -X POST -sLA "$UA" -b $workdir/cookie https://m.client.10010.com/welfare-mall-front-activity/mobile/activity/getPointsMall/v1 >$workdir/freescoregift.log2
+    getPointsMallstock=($(cat $workdir/freescoregift.log2 | grep -oE "{[^{]*" | grep -E "tabName\":\"3#定向积分#免费领" | grep -oE "stock\":[0-9]+" | sed "s/\":/-/g" | tr "\n" " "))
+    getPointsMallgoods=($(cat $workdir/freescoregift.log2 | grep -oE "{[^{]*" | grep -E "tabName\":\"3#定向积分#免费领" | grep -oE "goodsName\":\"[^\"]+" | cut -f3 -d\" | tr "\n" " "))
+    getPointsgoodlinkU=($(cat $workdir/freescoregift.log2 | grep -oE "{[^{]*" | grep -E "tabName\":\"3#定向积分#免费领" | grep -oE "linkUrl\":\"[^\"]+" | cut -f3 -d\" | tr "\n" " "))
+    for ((i = 0; i < ${#getPointsMallgoods[*]}; i++)); do echo ${getPointsMallstock[i]}-${getPointsMallgoods[i]}-${getPointsgoodsImgs[i]} >>$workdir/freescoregift.info; done
+    sed -i "/^stock-0/d" $workdir/freescoregift.info
     #
     cat $workdir/freescoregift.info
 }
@@ -423,6 +426,7 @@ function main() {
     done
     echo && echo $(date) ${userlogin_err[*]} ${#userlogin_err[*]} Failed. ${userlogin_ook[*]} ${#userlogin_ook[*]} Accomplished.
     #rm -rf ${workdirbase}_*
+    #username=13012341234 && unicom_version=8.0200 && workdirbase="/tmp/log/CnUnicom" && workdir="${workdirbase}_${username}" && UA="Mozilla/5.0 (Linux; Android 11; MI 9 Build/RKQ1.200826.002; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/87.0.4280.141 Mobile Safari/537.36; unicom{version:android@$unicom_version,desmobile:$username};devicetype{deviceBrand:Xiaomi,deviceModel:MI 9}"
 }
 
 main
