@@ -304,14 +304,24 @@ function jifeninfo() {
     # 积分信息显示，需传入参数 jifeninfo
     echo ${all_parameter[*]} | grep -qE "jifeninfo" || return 0
     echo && echo starting jifeninfo...
-    curl -m 10 -X POST -sA "$UA" -b $workdir/cookie --data "reqsn=&reqtime=&cliver=&reqdata=" "https://m.client.10010.com/welfare-mall-front/mobile/show/queryUserTotalScore/v1" >$workdir/jifeninfo.log1 
-    curl -m 10 -X POST -sA "$UA" -b $workdir/cookie --data "reqsn=&reqtime=&cliver=&reqdata=" "https://m.client.10010.com/welfare-mall-front/mobile/show/flDetail/v1/0" >$workdir/jifeninfo.log2
-    #
-    unset total invalid canUse availablescore invalidscore addScore todayscore yesterdayscore
-    total=$(cat $workdir/jifeninfo.log1 | grep -oE "total\":[0-9]+" | grep -oE "[0-9]+")
-    invalid=$(cat $workdir/jifeninfo.log1 | grep -oE "invalid\":[0-9]+" | grep -oE "[0-9]+")
-    canUse=$(cat $workdir/jifeninfo.log1 | grep -oE "canUse\":[0-9]+" | grep -oE "[0-9]+")
-    #
+    # 总积分信息
+    for ((i = 0; i < 3; i++)); do
+        curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://m.client.10010.com/welfare-mall-front/mobile/show/bj2205/v2/Y" >$workdir/jifeninfo.log
+        cat $workdir/jifeninfo.log | grep -qE "查询成功" && break || sleep 3
+    done
+    jfnumber=($(cat $workdir/jifeninfo.log3 | grep -oE "number\":\"[0-9]+" | grep -oE "[0-9]+" | tr "\n" " "))
+    jfname=($(cat $workdir/jifeninfo.log3 | grep -oE "name\":\"[^\"]+" | cut -d\" -f3 | tr "\n" " "))
+    # 本月将过期积分
+    for ((i = 0; i < 3; i++)); do
+        curl -m 10 -X POST -sA "$UA" -b $workdir/cookie --data "reqsn=&reqtime=&cliver=&reqdata=" "https://m.client.10010.com/welfare-mall-front/mobile/show/queryUserTotalScore/v1" >$workdir/jifeninfo.log
+        cat $workdir/jifeninfo.log | grep -qE "查询成功" && break || sleep 3
+    done
+    invalid=$(cat $workdir/jifeninfo.log | grep -oE "invalid\":[0-9]+" | grep -oE "[0-9]+")
+    # 奖励积分详情
+    for ((i = 0; i < 3; i++)); do
+        curl -m 10 -X POST -sA "$UA" -b $workdir/cookie --data "reqsn=&reqtime=&cliver=&reqdata=" "https://m.client.10010.com/welfare-mall-front/mobile/show/flDetail/v1/0" >$workdir/jifeninfo.log
+        cat $workdir/jifeninfo.log | grep -qE "查询成功" && break || sleep 3
+    done
     availablescore=$(cat $workdir/jifeninfo.log2 | grep -oE "availablescore\":\"[0-9]+" | grep -oE "[0-9]+")
     invalidscore=$(cat $workdir/jifeninfo.log2 | grep -oE "invalidscore\":\"[0-9]+" | grep -oE "[0-9]+")
     addScore=$(cat $workdir/jifeninfo.log2 | grep -oE "addScore\":\"[0-9]+" | grep -oE "[0-9]+")
@@ -325,7 +335,7 @@ function jifeninfo() {
     yesterdayscorelist=($(cat $workdir/jifeninfo.log2 | grep -oE "createTime\":\"$yesterday[^}]*" | grep 'books_oper_type":"0"' | grep -oE "books_number\":[0-9]+" | grep -oE "[0-9]+" | tr "\n" " "))
     for ((i = 0; i < ${#yesterdayscorelist[*]}; i++)); do yesterdayscore=$((yesterdayscore+yesterdayscorelist[i])); done
     # info
-    echo $(echo ${username:0:2}******${username:8}) 总积分:$total 本月将过期积分:$invalid 可用积分:$canUse 奖励积分:$availablescore 本月将过期奖励积分:$invalidscore 本月新增奖励积分:$addScore 本月消耗奖励积分:$decrScore 昨日奖励积分:$yesterdayscore 今日奖励积分:$todayscore
+    echo $(echo ${username:0:2}******${username:8}) 总积分-$((${jfnumber[0]}+${jfnumber[1]}+${jfnumber[2]})) 通信积分-${jfnumber[0]} 奖励积分-${jfnumber[1]} 定向积分-${jfnumber[2]} 本月将过期积分:$invalid 本月将过期奖励积分:$invalidscore 本月新增奖励积分:$addScore 本月消耗奖励积分:$decrScore 昨日奖励积分:$yesterdayscore 今日奖励积分:$todayscore
 }
 
 function otherinfo() {
@@ -371,14 +381,14 @@ function formatsendinfo() {
     if $(echo ${all_parameter[*]} | grep -qE "sendsimple"); then
         echo ${userlogin_ook[u]} ${#userlogin_ook[*]} Accomplished. ${userlogin_err[u]} ${#userlogin_err[*]} Failed. >$formatsendinfo_file
         echo ${all_parameter[*]} | grep -qE "otherinfo"     && echo 可用余额:$curntbalancecust 实时话费:$realfeecust >>$formatsendinfo_file
-        echo ${all_parameter[*]} | grep -qE "jifeninfo"     && echo 积分:$total-$availablescore-$todayscore >>$formatsendinfo_file
+        echo ${all_parameter[*]} | grep -qE "jifeninfo"     && echo 总积分-$((${jfnumber[0]}+${jfnumber[1]}+${jfnumber[2]})) 通信积分-${jfnumber[0]} 奖励积分-${jfnumber[1]} 定向积分-${jfnumber[2]} 今日奖励积分:$todayscore >>$formatsendinfo_file
         echo ${all_parameter[*]} | grep -qE "hfgoactive"    && echo 话费购奖品: $(cat $workdir/hfgoactive.info | tail -n +2) >>$formatsendinfo_file
         echo ${all_parameter[*]} | grep -qE "freescoregift" && echo 定向积分免费商品数量:$(cat $workdir/freescoregift.info | tail -n +3 | grep -cv '^$') >>$formatsendinfo_file
         echo ${all_parameter[*]} | grep -qE "liulactive" && [[ -f $workdir/liulactive.info ]] && [[ $(cat $workdir/liulactive.info) != "" ]] && echo 流量激活: $(cat $workdir/liulactive.info) >>$formatsendinfo_file
     else
         echo ${userlogin_err[u]} ${#userlogin_err[*]} Failed. ${userlogin_ook[u]} ${#userlogin_ook[*]} Accomplished. >$formatsendinfo_file
         echo ${all_parameter[*]} | grep -qE "otherinfo" && cat $workdir/otherinfo.info >>$formatsendinfo_file
-        echo ${all_parameter[*]} | grep -qE "jifeninfo" && echo $(echo ${username:0:2}******${username:8}) 总积分:$total 本月将过期积分:$invalid 可用积分:$canUse 奖励积分:$availablescore 本月将过期奖励积分:$invalidscore 本月新增奖励积分:$addScore 本月消耗奖励积分:$decrScore 昨日奖励积分:$yesterdayscore 今日奖励积分:$todayscore >>$formatsendinfo_file
+        echo ${all_parameter[*]} | grep -qE "jifeninfo" && echo $(echo ${username:0:2}******${username:8}) 总积分-$((${jfnumber[0]}+${jfnumber[1]}+${jfnumber[2]})) 通信积分-${jfnumber[0]} 奖励积分-${jfnumber[1]} 定向积分-${jfnumber[2]} 本月将过期积分:$invalid 本月将过期奖励积分:$invalidscore 本月新增奖励积分:$addScore 本月消耗奖励积分:$decrScore 昨日奖励积分:$yesterdayscore 今日奖励积分:$todayscore >>$formatsendinfo_file
         echo ${all_parameter[*]} | grep -qE "hfgoactive" && cat $workdir/hfgoactive.info >>$formatsendinfo_file
         [[ $u == $((${#all_username_password[*]}-1)) ]] && echo ${all_parameter[*]} | grep -qE "freescoregift" && cat $workdir/freescoregift.info >>$formatsendinfo_file
         echo ${all_parameter[*]} | grep -qE "liulactive" && [[ -f $workdir/liulactive.info ]] && [[ $(cat $workdir/liulactive.info) != "" ]] && echo 流量激活: $(cat $workdir/liulactive.info) >>$formatsendinfo_file
