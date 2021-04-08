@@ -309,8 +309,8 @@ function jifeninfo() {
         curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://m.client.10010.com/welfare-mall-front/mobile/show/bj2205/v2/Y" >$workdir/jifeninfo.log
         cat $workdir/jifeninfo.log | grep -qE "查询成功" && break || sleep 3
     done
-    jfnumber=($(cat $workdir/jifeninfo.log3 | grep -oE "number\":\"[0-9]+" | grep -oE "[0-9]+" | tr "\n" " "))
-    jfname=($(cat $workdir/jifeninfo.log3 | grep -oE "name\":\"[^\"]+" | cut -d\" -f3 | tr "\n" " "))
+    jfnumber=($(cat $workdir/jifeninfo.log | grep -oE "number\":\"[0-9]+" | grep -oE "[0-9]+" | tr "\n" " "))
+    jfname=($(cat $workdir/jifeninfo.log | grep -oE "name\":\"[^\"]+" | cut -d\" -f3 | tr "\n" " "))
     # 本月将过期积分
     for ((i = 0; i < 3; i++)); do
         curl -m 10 -X POST -sA "$UA" -b $workdir/cookie --data "reqsn=&reqtime=&cliver=&reqdata=" "https://m.client.10010.com/welfare-mall-front/mobile/show/queryUserTotalScore/v1" >$workdir/jifeninfo.log
@@ -322,17 +322,17 @@ function jifeninfo() {
         curl -m 10 -X POST -sA "$UA" -b $workdir/cookie --data "reqsn=&reqtime=&cliver=&reqdata=" "https://m.client.10010.com/welfare-mall-front/mobile/show/flDetail/v1/0" >$workdir/jifeninfo.log
         cat $workdir/jifeninfo.log | grep -qE "查询成功" && break || sleep 3
     done
-    availablescore=$(cat $workdir/jifeninfo.log2 | grep -oE "availablescore\":\"[0-9]+" | grep -oE "[0-9]+")
-    invalidscore=$(cat $workdir/jifeninfo.log2 | grep -oE "invalidscore\":\"[0-9]+" | grep -oE "[0-9]+")
-    addScore=$(cat $workdir/jifeninfo.log2 | grep -oE "addScore\":\"[0-9]+" | grep -oE "[0-9]+")
-    decrScore=$(cat $workdir/jifeninfo.log2 | grep -oE "decrScore\":\"[0-9]+" | grep -oE "[0-9]+")
+    availablescore=$(cat $workdir/jifeninfo.log | grep -oE "availablescore\":\"[0-9]+" | grep -oE "[0-9]+")
+    invalidscore=$(cat $workdir/jifeninfo.log | grep -oE "invalidscore\":\"[0-9]+" | grep -oE "[0-9]+")
+    addScore=$(cat $workdir/jifeninfo.log | grep -oE "addScore\":\"[0-9]+" | grep -oE "[0-9]+")
+    decrScore=$(cat $workdir/jifeninfo.log | grep -oE "decrScore\":\"[0-9]+" | grep -oE "[0-9]+")
     # 今日奖励积分
     today="$(date +%Y-%m-%d)" && todayscore=0
-    todayscorelist=($(cat $workdir/jifeninfo.log2 | grep -oE "createTime\":\"$today[^}]*" | grep 'books_oper_type":"0"' | grep -oE "books_number\":[0-9]+" | grep -oE "[0-9]+" | tr "\n" " "))
+    todayscorelist=($(cat $workdir/jifeninfo.log | grep -oE "createTime\":\"$today[^}]*" | grep 'books_oper_type":"0"' | grep -oE "books_number\":[0-9]+" | grep -oE "[0-9]+" | tr "\n" " "))
     for ((i = 0; i < ${#todayscorelist[*]}; i++)); do todayscore=$((todayscore+todayscorelist[i])); done
     # 昨日奖励积分
     yesterday="$(date -d "1 days ago" +%Y-%m-%d)" && yesterdayscore=0
-    yesterdayscorelist=($(cat $workdir/jifeninfo.log2 | grep -oE "createTime\":\"$yesterday[^}]*" | grep 'books_oper_type":"0"' | grep -oE "books_number\":[0-9]+" | grep -oE "[0-9]+" | tr "\n" " "))
+    yesterdayscorelist=($(cat $workdir/jifeninfo.log | grep -oE "createTime\":\"$yesterday[^}]*" | grep 'books_oper_type":"0"' | grep -oE "books_number\":[0-9]+" | grep -oE "[0-9]+" | tr "\n" " "))
     for ((i = 0; i < ${#yesterdayscorelist[*]}; i++)); do yesterdayscore=$((yesterdayscore+yesterdayscorelist[i])); done
     # info
     echo $(echo ${username:0:2}******${username:8}) 总积分-$((${jfnumber[0]}+${jfnumber[1]}+${jfnumber[2]})) 通信积分-${jfnumber[0]} 奖励积分-${jfnumber[1]} 定向积分-${jfnumber[2]} 本月将过期积分:$invalid 本月将过期奖励积分:$invalidscore 本月新增奖励积分:$addScore 本月消耗奖励积分:$decrScore 昨日奖励积分:$yesterdayscore 今日奖励积分:$todayscore
