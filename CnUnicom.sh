@@ -305,23 +305,23 @@ function jifeninfo() {
     echo ${all_parameter[*]} | grep -qE "jifeninfo" || return 0
     echo && echo starting jifeninfo...
     # 通信 奖励 定向 积分
-    for ((i = 0; i < 3; i++)); do
+    for ((i = 0; i < 5; i++)); do
         curl -m 10 -X POST -sA "$UA" -b $workdir/cookie "https://m.client.10010.com/welfare-mall-front/mobile/show/bj2205/v2/Y" >$workdir/jifeninfo.log
-        cat $workdir/jifeninfo.log | grep -qE "查询成功" && break || sleep 3
+        cat $workdir/jifeninfo.log | grep -qE "查询成功" && break || sleep 1
     done
     jfnumber=($(cat $workdir/jifeninfo.log | grep -oE "number\":\"[0-9]+" | grep -oE "[0-9]+" | tr "\n" " "))
     jfname=($(cat $workdir/jifeninfo.log | grep -oE "name\":\"[^\"]+" | cut -d\" -f3 | tr "\n" " "))
     # 总积分和将过期积分
-    for ((i = 0; i < 3; i++)); do
+    for ((i = 0; i < 5; i++)); do
         curl -m 10 -X POST -sA "$UA" -b $workdir/cookie --data "reqsn=&reqtime=&cliver=&reqdata=" "https://m.client.10010.com/welfare-mall-front/mobile/show/queryUserTotalScore/v1" >$workdir/jifeninfo.log
-        cat $workdir/jifeninfo.log | grep -qE "查询成功" && break || sleep 3
+        cat $workdir/jifeninfo.log | grep -qE "查询成功" && break || sleep 1
     done
     invalid=$(cat $workdir/jifeninfo.log | grep -oE "invalid\":[0-9]+" | grep -oE "[0-9]+")
     canUse=$(cat $workdir/jifeninfo.log | grep -oE "canUse\":[0-9]+" | grep -oE "[0-9]+")
     # 奖励积分详情
-    for ((i = 0; i < 3; i++)); do
+    for ((i = 0; i < 5; i++)); do
         curl -m 10 -X POST -sA "$UA" -b $workdir/cookie --data "reqsn=&reqtime=&cliver=&reqdata=" "https://m.client.10010.com/welfare-mall-front/mobile/show/flDetail/v1/0" >$workdir/jifeninfo.log
-        cat $workdir/jifeninfo.log | grep -qE "查询成功" && break || sleep 3
+        cat $workdir/jifeninfo.log | grep -qE "查询成功" && break || sleep 1
     done
     availablescore=$(cat $workdir/jifeninfo.log | grep -oE "availablescore\":\"[0-9]+" | grep -oE "[0-9]+")
     invalidscore=$(cat $workdir/jifeninfo.log | grep -oE "invalidscore\":\"[0-9]+" | grep -oE "[0-9]+")
